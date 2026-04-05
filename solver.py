@@ -6,6 +6,7 @@ class SolverConfigError(ValueError):
     """布局或配置不合法时抛出。"""
 @dataclass
 class SolveResult:
+    """path 元素为 (id, picked)；picked 仅在该 id 为 R2 时为 True。"""
     path: list
     total_cost: float
 
@@ -14,6 +15,10 @@ class MerlinALLRouter:
     def __init__(self, entry_nodes=(1, 2, 3), exit_nodes=(10, 11, 12)):
         self.entry_nodes = entry_nodes
         self.exit_nodes = exit_nodes
+
+    @staticmethod
+    def _pick_flag(piles, node_id):
+        return piles[node_id].block_type == "R2"
 
     def _solve_weighted_route(self, piles):
         if set(piles.keys()) != set(range(1, 13)):
@@ -60,7 +65,7 @@ class MerlinALLRouter:
                             valid_route = False
                             break
 
-                        queue = [(0, p1, [p1])]
+                        queue = [(0, p1, [(p1, self._pick_flag(piles, p1))])]
                         min_cost_to_node = {p1: 0}
                         sub_path = None
                         sub_cost = float("inf")
@@ -96,7 +101,7 @@ class MerlinALLRouter:
 
                                 if new_cost < min_cost_to_node.get(nxt, float("inf")):
                                     min_cost_to_node[nxt] = new_cost
-                                    heapq.heappush(queue, (new_cost, nxt, path + [nxt]))
+                                    heapq.heappush(queue, (new_cost, nxt, path + [(nxt, self._pick_flag(piles, nxt))]))
 
                         if sub_path is None:
                             valid_route = False
@@ -124,6 +129,10 @@ class MerlinMasterRouter:
         self.COST_EMPTY = 1    
         self.COST_R1 = 2      
         self.COST_R2 = 5      
+
+    @staticmethod
+    def _pick_flag(piles, node_id):
+        return piles[node_id].block_type == "R2"
 
     def _solve_two_phase_route(self, piles):
         if set(piles.keys()) != set(range(1, 13)):
@@ -177,7 +186,7 @@ class MerlinMasterRouter:
         if piles[start].block_type == "FAKE" or piles[end].block_type == "FAKE":
             return None, float("inf")
 
-        queue = [(0, start, [start])]
+        queue = [(0, start, [(start, self._pick_flag(piles, start))])]
         min_cost_to_node = {start: 0}
 
         while queue:
@@ -224,7 +233,7 @@ class MerlinMasterRouter:
 
                 if new_cost < min_cost_to_node.get(nxt, float("inf")):
                     min_cost_to_node[nxt] = new_cost
-                    heapq.heappush(queue, (new_cost, nxt, path + [nxt]))
+                    heapq.heappush(queue, (new_cost, nxt, path + [(nxt, self._pick_flag(piles, nxt))]))
 
         return None, float("inf")
     

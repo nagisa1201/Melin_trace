@@ -113,14 +113,15 @@ class MerlinWeightedPathFinder:
 
             log += f"全局最优总代价: {total_cost}\n"
             log += f"总行动步数: {len(path)-1} 步\n"  
-            log += f"路径: {' -> '.join(map(str, path))}"
+            # 路径元素为 (id, picked)，日志中同时展示编号和取块标记。
+            log += f"路径: {' -> '.join(f'{node_id}[{"T" if picked else "F"}]' for node_id, picked in path)}"
             self.result_text.set(log)
             self.draw_path(path)
         else:
             self.result_text.set("无解：被假KFS彻底封死了所有可能路线。")
 
     def draw_path(self, path):
-        coords = [(20 + (n-1)%3*120 + 60, 20 + (n-1)//3*120 + 60) for n in path]
+        coords = [(20 + (node_id-1)%3*120 + 60, 20 + (node_id-1)//3*120 + 60) for node_id, _ in path]
         for i in range(len(coords) - 1):
             x1, y1 = coords[i]; x2, y2 = coords[i+1]
             offset = (i % 3 - 1) * 6
