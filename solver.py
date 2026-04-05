@@ -11,8 +11,7 @@ class SolveResult:
 
 class MerlinALLRouter:
     """算法调用类：封装校验、最短路与全局寻优。"""
-    def __init__(self, required_counts, entry_nodes=(1, 2, 3), exit_nodes=(10, 11, 12)):
-        self.required_counts = required_counts
+    def __init__(self, entry_nodes=(1, 2, 3), exit_nodes=(10, 11, 12)):
         self.entry_nodes = entry_nodes
         self.exit_nodes = exit_nodes
 
@@ -118,18 +117,13 @@ class MerlinALLRouter:
     
 class MerlinMasterRouter:
     """争KongFu Master的寻路逻辑，拿完一个R2 KFS就试图直接撤离，此时视R2 KFS为高代价区域，R1 KFS反而代价更低（需要R1速捡去R1 KFS配合）"""
-    def __init__(self, required_counts, entry_nodes=(1, 2, 3), exit_nodes=(10, 11, 12)):
-        self.required_counts = required_counts
+    def __init__(self, entry_nodes=(1, 2, 3), exit_nodes=(10, 11, 12)):
         self.entry_nodes = entry_nodes
         self.exit_nodes = exit_nodes
-        # 撤离阶段的动态地形代价
+
         self.COST_EMPTY = 1    
         self.COST_R1 = 2      
         self.COST_R2 = 5      
-
-    def solve(self, piles):
-        path, cost = self._solve_two_phase_route(piles)
-        return SolveResult(path=path, total_cost=cost)
 
     def _solve_two_phase_route(self, piles):
         if set(piles.keys()) != set(range(1, 13)):
@@ -173,7 +167,7 @@ class MerlinMasterRouter:
                     total_cost = cost1 + cost2
                     if total_cost < min_total_cost:
                         min_total_cost = total_cost
-                        # 拼接路径 (注意剔除重复连接点 target_r2)
+                        # 拼接路径 (剔除重复连接点 target_r2)
                         best_path = path1 + path2[1:]
 
         return best_path, min_total_cost
@@ -233,16 +227,4 @@ class MerlinMasterRouter:
                     heapq.heappush(queue, (new_cost, nxt, path + [nxt]))
 
         return None, float("inf")
-def solve_weighted_route(
-    piles,
-    required_counts,
-    entry_nodes=(1, 2, 3),
-    exit_nodes=(10, 11, 12),
-):
-    """兼容旧调用：返回 (path, total_cost)。"""
-    path, total_cost = MerlinALLRouter(
-        required_counts=required_counts,
-        entry_nodes=entry_nodes,
-        exit_nodes=exit_nodes,
-    )._solve_weighted_route(piles)
-    return path, total_cost
+    

@@ -1,18 +1,19 @@
 import tkinter as tk
 from tkinter import messagebox
 from meilin_map import MeilinMap
-from solver import MerlinALLRouter, SolverConfigError
+from solver import MerlinALLRouter, MerlinMasterRouter, SolverConfigError
 
 class MerlinWeightedPathFinder:
-    def __init__(self, root, required_counts=None, half_flag="blue", coordinates=None, heights=None):
+    def __init__(self, root, half_flag="blue", coordinates=None, heights=None):
         self.root = root
         self.root.title("ROBOCON 2026 - 梅林带权图智能寻路 (Dijkstra + TSP)")
         self.root.geometry("650x850")
         
         self.STATES = ["EMPTY", "R2", "R1", "FAKE"]
         self.COLORS = {"EMPTY": "#f0f0f0", "R2": "#a8e6cf", "R1": "#ffb347", "FAKE": "#dcedc1"}
-        self.required_counts = required_counts or {"R2": 2, "R1": 2, "FAKE": 1}
-        self.route_solver = MerlinALLRouter(required_counts=self.required_counts)
+
+        # self.route_solver = MerlinALLRouter(required_counts=self.required_counts)
+        self.route_solver = MerlinMasterRouter()
         self.map_model = MeilinMap(
             half_flag=half_flag,
             coordinates=coordinates,
@@ -31,16 +32,6 @@ class MerlinWeightedPathFinder:
         info_frame = tk.Frame(self.root)
         info_frame.pack(pady=10)
         tk.Label(info_frame, text=f"空地/R2 代价={self.map_model.normal_cost}步 | R1 代价={self.map_model.r1_penalty} (需等待队友) | 假KFS=死路", font=("Arial", 11, "bold")).pack()
-        self.count_label = tk.Label(
-            info_frame,
-            text=(
-                f"当前数量: R2(0/{self.required_counts['R2']}), "
-                f"R1(0/{self.required_counts['R1']}), "
-                f"假KFS(0/{self.required_counts['FAKE']})"
-            ),
-            fg="blue",
-        )
-        self.count_label.pack(pady=5)
 
         self.canvas = tk.Canvas(self.root, width=400, height=530, bg="white", highlightthickness=2, highlightbackground="black")
         self.canvas.pack(pady=10)
@@ -69,6 +60,10 @@ class MerlinWeightedPathFinder:
         btn_frame.pack(pady=10)
         tk.Button(btn_frame, text="清空网格", command=self.reset_grid, width=10).pack(side=tk.LEFT, padx=10)
         tk.Button(btn_frame, text="计算最小代价路径", command=self.calculate_path, bg="#4CAF50", fg="white", font=("Arial", 12, "bold"), width=15).pack(side=tk.LEFT, padx=10)
+
+        self.count_label = tk.Label(self.root, font=("Arial", 10))
+        self.count_label.pack(pady=4)
+        self.update_counts()
         
         self.result_text = tk.StringVar()
         self.result_text.set("等待计算...")
@@ -87,11 +82,7 @@ class MerlinWeightedPathFinder:
     def update_counts(self):
         counts = self.map_model.count_types()
         self.count_label.config(
-            text=(
-                f"当前数量: R2({counts['R2']}/{self.required_counts['R2']}), "
-                f"R1({counts['R1']}/{self.required_counts['R1']}), "
-                f"假KFS({counts['FAKE']}/{self.required_counts['FAKE']})"
-            )
+            text=f"当前数量: R2({counts['R2']}), R1({counts['R1']}), 假KFS({counts['FAKE']})"
         )
 
     def clear_path(self):
@@ -109,7 +100,10 @@ class MerlinWeightedPathFinder:
     def calculate_path(self):
         self.clear_path()
         try:
-            path, total_cost = self.route_solver._solve_weighted_route(self.map_model.piles)
+
+            # path, total_cost = self.route_solver._solve_weighted_route(self.map_model.piles)
+            path, total_cost = self.route_solver._solve_two_phase_route(self.map_model.piles)
+
         except SolverConfigError as exc:
             messagebox.showerror("配置错误", str(exc))
             return
